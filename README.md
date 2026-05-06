@@ -10,19 +10,14 @@
 ## 📋 Overview
 
 This project builds a complete natural language interface for autonomous robot
-control. A user can command a TurtleBot3 Burger in plain English — for example
-**"go to the kitchen"** or **"turn left 90 degrees"** — using either typed text
+control. A user can command a TurtleBot3 Burger in plain English for example
+**"go to the kitchen"** or **"turn left 90 degrees"** using either typed text
 or voice input directly in the browser.
 
 The system interprets user intent using Claude AI's `tool_use` API, discovers
 available ROS2 topics dynamically at startup, and routes commands to either
 direct velocity control (`/cmd_vel`) or Nav2 autonomous path planning with
 real-time obstacle avoidance.
-
-This project was developed as part of the Master's programme in Mechatronics
-at **RWU Hochschule Ravensburg-Weingarten**, under the supervision of
-**Prof. Dr. Stefan Elser**.
-
 ---
 
 ## 🏗️ System Architecture
@@ -61,16 +56,16 @@ User (text or voice)
 
 ## ✨ Features
 
-- **Natural language understanding** — Claude AI interprets free-form English commands
-- **Dual navigation modes** — velocity commands for short moves, Nav2 for room-to-room navigation
-- **Voice input** — speak commands directly in the browser via Web Speech API (no external service)
-- **Live mini-map** — real-time robot position plotted against all named room locations
-- **Semantic location map** — define named rooms (kitchen, living room, dining hall, etc.)
-- **Dynamic topic discovery** — LLM receives the live ROS2 topic list at startup, works with any robot
-- **Safety layer** — velocity clamping, topic whitelisting, duration limits before every command
-- **Multi-turn conversation** — context-aware follow-ups ("go back", "now turn around")
-- **Auto-reconnect** — UI automatically recovers from server restarts or network drops
-- **Conversation reset** — clear LLM context with one button for a fresh session
+- **Natural language understanding**: Claude AI interprets free-form English commands
+- **Dual navigation modes**: velocity commands for short moves, Nav2 for room-to-room navigation
+- **Voice input**: speak commands directly in the browser via Web Speech API (no external service)
+- **Live mini-map**: real-time robot position plotted against all named room locations
+- **Semantic location map**: define named rooms (kitchen, living room, dining hall, etc.)
+- **Dynamic topic discovery**: LLM receives the live ROS2 topic list at startup, works with any robot
+- **Safety layer**: velocity clamping, topic whitelisting, duration limits before every command
+- **Multi-turn conversation**: context-aware follow-ups ("go back", "now turn around")
+- **Auto-reconnect**: UI automatically recovers from server restarts or network drops
+- **Conversation reset**: clear LLM context with one button for a fresh session
 
 ---
 

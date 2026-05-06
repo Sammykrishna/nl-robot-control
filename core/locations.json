@@ -1,0 +1,44 @@
+{
+  "home": {
+    "x": 4.988605536382462,
+    "y": 0.5974457787007058,
+    "yaw": -0.006249700,
+    "description": "starting home position"
+  },
+  "storage_room": {
+    "x": 8.119751391897374,
+    "y": 5.217200455734228,
+    "yaw": -1.574,
+    "description": "storage room"
+  },
+  "kitchen": {
+    "x": 12.85050466825219,
+    "y": 1.882050285876886,
+    "yaw": 1.570,
+    "description": "kitchen area"
+  },
+  "living_room": {
+    "x": 3.7496330785517924,
+    "y": 2.046821406033441,
+    "yaw": 1.570,
+    "description": "living room"
+  },
+  "study_room_1": {
+    "x": 0.8166072059073953,
+    "y": 4.380837522699175,
+    "yaw": -1.485,
+    "description": "study room 1"
+  },
+  "study_room_2": {
+    "x": 0.8456424007360713,
+    "y": 0.5737574911333256,
+    "yaw": -1.571,
+    "description": "study room 2"
+  },
+  "dining_hall": {
+    "x": 13.131508730573227,
+    "y": -0.12373892140839711,
+    "yaw": -1.565,
+    "description": "dining hall"
+  }
+}

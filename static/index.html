@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NL Robot Control</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 10px 20px;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ef4444; display: inline-block; margin-right: 6px;
+  }
+  #status-dot.connected { background: #22c55e; }
+
+  /* ── Main layout: chat left, panels right ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Chat column ── */
+  .chat-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* State bar */
+  #state-panel {
+    display: flex;
+    gap: 16px;
+    padding: 8px 20px;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  .state-item span:first-child { color: #64748b; margin-right: 4px; }
+  .state-item span:last-child  { color: #94a3b8; font-family: monospace; }
+
+  /* Messages */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    max-width: 78%;
+    padding: 9px 13px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .msg.user     { background:#3b82f6; color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+  .msg.robot    { background:#1e293b; color:#cbd5e1; align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.status   { background:transparent; color:#475569; font-size:11px; align-self:center; font-style:italic; }
+  .msg.thinking { background:#1e293b; color:#64748b; align-self:flex-start; font-style:italic; }
+  .msg.error    { background:#450a0a; color:#fca5a5; align-self:flex-start; }
+  .msg.voice    { background:#1e3a5f; color:#93c5fd; align-self:flex-end; border-bottom-right-radius:4px; font-style:italic; }
+
+  /* Quick buttons */
+  #quick-cmds {
+    padding: 6px 20px 6px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .qbtn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .qbtn:hover { border-color:#3b82f6; color:#e2e8f0; }
+
+  /* Nav location buttons */
+  #nav-cmds {
+    padding: 0 20px 6px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .nbtn {
+    background: #0f2744;
+    border: 1px solid #1e4080;
+    color: #60a5fa;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .nbtn:hover { border-color:#3b82f6; color:#e2e8f0; }
+
+  /* Input bar */
+  #input-bar {
+    padding: 10px 20px;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  #msg-input {
+    flex: 1;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: 8px 12px;
+    font-size: 13px;
+    outline: none;
+  }
+  #msg-input:focus  { border-color:#3b82f6; }
+  #msg-input::placeholder { color:#475569; }
+
+  #send-btn {
+    background: #3b82f6; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px;
+    cursor: pointer; font-weight: 500;
+  }
+  #send-btn:hover    { background:#2563eb; }
+  #send-btn:disabled { background:#1e3a5f; color:#475569; cursor:not-allowed; }
+
+  #mic-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #94a3b8;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #mic-btn:hover    { border-color:#3b82f6; }
+  #mic-btn.listening { background:#ef4444; border-color:#ef4444; color:#fff; }
+
+  /* ── Right panel ── */
+  .right-panel {
+    width: 320px;
+    border-left: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .panel-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  /* Mini-map canvas */
+  #minimap {
+    width: 100%;
+    height: 220px;
+    background: #0a0f1a;
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+    display: block;
+  }
+
+  /* Nav status */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 3px 0;
+    border-bottom: 1px solid #0f172a;
+  }
+  .nav-row span:first-child { color:#64748b; }
+  .nav-row span:last-child  { color:#94a3b8; font-family:monospace; }
+
+  /* Reset button */
+  #reset-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #64748b;
+    padding: 7px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  #reset-btn:hover { border-color:#ef4444; color:#ef4444; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>
+    <span id="status-dot"></span>
+    NL Robot Control — TurtleBot3 Jazzy
+  </h1>
+  <span id="status-text" style="font-size:11px;color:#64748b">Connecting...</span>
+</header>
+
+<div class="main">
+
+  <!-- Left: chat -->
+  <div class="chat-col">
+
+    <div id="state-panel">
+      <div class="state-item"><span>x</span><span id="s-x">—</span></div>
+      <div class="state-item"><span>y</span><span id="s-y">—</span></div>
+      <div class="state-item"><span>heading</span><span id="s-h">—</span></div>
+      <div class="state-item" style="margin-left:auto">
+        <span>topics</span><span id="s-topics">—</span>
+      </div>
+    </div>
+
+    <div id="messages">
+      <div class="msg status">Send a command by typing, voice, or the quick buttons below</div>
+    </div>
+
+    <!-- Velocity quick buttons -->
+    <div id="quick-cmds">
+      <span style="font-size:11px;color:#475569;align-self:center">velocity:</span>
+      <button class="qbtn" onclick="sendQuick('move forward 0.5 meters')">forward 0.5m</button>
+      <button class="qbtn" onclick="sendQuick('move backward 0.3 meters')">backward 0.3m</button>
+      <button class="qbtn" onclick="sendQuick('turn left 90 degrees')">left 90°</button>
+      <button class="qbtn" onclick="sendQuick('turn right 90 degrees')">right 90°</button>
+      <button class="qbtn" onclick="sendQuick('spin 360 degrees')">spin 360°</button>
+    </div>
+
+    <!-- Navigation quick buttons — your actual rooms -->
+    <div id="nav-cmds">
+      <span style="font-size:11px;color:#475569;align-self:center">navigate:</span>
+      <button class="nbtn" onclick="sendQuick('go to home')">home</button>
+      <button class="nbtn" onclick="sendQuick('go to kitchen')">kitchen</button>
+      <button class="nbtn" onclick="sendQuick('go to living room')">living room</button>
+      <button class="nbtn" onclick="sendQuick('go to dining hall')">dining hall</button>
+      <button class="nbtn" onclick="sendQuick('go to storage room')">storage</button>
+      <button class="nbtn" onclick="sendQuick('go to study room 1')">study 1</button>
+      <button class="nbtn" onclick="sendQuick('go to study room 2')">study 2</button>
+    </div>
+
+    <div id="input-bar">
+      <input id="msg-input"
+             type="text"
+             placeholder="Type or use mic... e.g. go to kitchen, turn left 90 degrees" />
+      <button id="mic-btn" onclick="toggleVoice()">Mic</button>
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+
+  </div><!-- end chat-col -->
+
+  <!-- Right panel -->
+  <div class="right-panel">
+
+    <!-- Mini-map -->
+    <div class="panel-section">
+      <div class="panel-title">Live position map</div>
+      <canvas id="minimap"></canvas>
+      <p style="font-size:10px;color:#334155;margin-top:4px;text-align:center">
+        Blue dot = robot · Grey dots = named locations
+      </p>
+    </div>
+
+    <!-- Nav status -->
+    <div class="panel-section">
+      <div class="panel-title">System status</div>
+      <div class="nav-row"><span>connection</span><span id="ns-conn">—</span></div>
+      <div class="nav-row"><span>last command</span><span id="ns-cmd">—</span></div>
+      <div class="nav-row"><span>robot x</span><span id="ns-x">—</span></div>
+      <div class="nav-row"><span>robot y</span><span id="ns-y">—</span></div>
+      <div class="nav-row"><span>heading</span><span id="ns-h">—</span></div>
+      <div class="nav-row"><span>topics loaded</span><span id="ns-topics">—</span></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-section">
+      <div class="panel-title">Controls</div>
+      <button id="reset-btn" onclick="resetConversation()">
+        Reset conversation history
+      </button>
+    </div>
+
+  </div><!-- end right-panel -->
+
+</div><!-- end main -->
+
+<script>
+  // ── DOM refs ──
+  const messagesEl = document.getElementById('messages');
+  const input      = document.getElementById('msg-input');
+  const sendBtn    = document.getElementById('send-btn');
+  const micBtn     = document.getElementById('mic-btn');
+  const statusDot  = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const canvas     = document.getElementById('minimap');
+  const ctx        = canvas.getContext('2d');
+
+  // Fix canvas resolution
+  canvas.width  = 288;
+  canvas.height = 220;
+
+  // ── Named locations (matches your locations.json) ──
+  const rooms = [
+    {name:'home',         x:4.988,  y:0.597},
+    {name:'kitchen',      x:12.850, y:1.882},
+    {name:'storage',      x:8.119,  y:5.217},
+    {name:'living room',  x:3.749,  y:2.046},
+    {name:'study 1',      x:0.816,  y:4.380},
+    {name:'study 2',      x:0.845,  y:0.573},
+    {name:'dining',       x:13.131, y:-0.123},
+  ];
+
+  // Map bounds — computed from your coordinates
+  const MAP_X_MIN = -1, MAP_X_MAX = 15;
+  const MAP_Y_MIN = -1, MAP_Y_MAX = 6.5;
+  const W = canvas.width, H = canvas.height;
+
+  function toCanvas(mx, my) {
+    const cx = (mx - MAP_X_MIN) / (MAP_X_MAX - MAP_X_MIN) * W;
+    const cy = H - (my - MAP_Y_MIN) / (MAP_Y_MAX - MAP_Y_MIN) * H;
+    return [cx, cy];
+  }
+
+  let robotX = 4.988, robotY = 0.597;
+
+  function drawMap() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#0a0f1a';
+    ctx.fillRect(0, 0, W, H);
+
+    // Room dots + labels
+    rooms.forEach(r => {
+      const [cx, cy] = toCanvas(r.x, r.y);
+      ctx.fillStyle = '#1e3a5f';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#475569';
+      ctx.font = '9px monospace';
+      ctx.fillText(r.name, cx + 7, cy + 3);
+    });
+
+    // Robot dot
+    const [rx, ry] = toCanvas(robotX, robotY);
+
+    // Glow effect
+    const grad = ctx.createRadialGradient(rx, ry, 0, rx, ry, 16);
+    grad.addColorStop(0, 'rgba(59,130,246,0.3)');
+    grad.addColorStop(1, 'rgba(59,130,246,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Robot circle
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.arc(rx, ry, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  drawMap();
+
+  // ── WebSocket ──
+  let ws = null;
+  let thinkingEl = null;
+
+  function connect() {
+    ws = new WebSocket(`ws://${location.host}/ws/chat`);
+
+    ws.onopen = () => {
+      statusDot.className = 'connected';
+      statusText.textContent = 'Connected';
+      document.getElementById('ns-conn').textContent = 'online';
+      sendBtn.disabled = false;
+
+      fetch('/health').then(r => r.json()).then(d => {
+        document.getElementById('s-topics').textContent  = d.topics;
+        document.getElementById('ns-topics').textContent = d.topics;
+      }).catch(() => {});
+    };
+
+    ws.onclose = () => {
+      statusDot.className = '';
+      statusText.textContent = 'Disconnected — retrying...';
+      document.getElementById('ns-conn').textContent = 'offline';
+      sendBtn.disabled = true;
+      setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => {
+      statusText.textContent = 'Connection error';
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'status') {
+        addMsg(data.msg, 'status');
+
+      } else if (data.type === 'thinking') {
+        thinkingEl = addMsg(data.msg + '...', 'thinking');
+
+      } else if (data.type === 'response') {
+        if (thinkingEl) { thinkingEl.remove(); thinkingEl = null; }
+        addMsg(data.msg, 'robot');
+        reenableInput();
+
+      } else if (data.type === 'state') {
+        const s = data.data;
+        robotX = s.x; robotY = s.y;
+
+        // Update state bar
+        document.getElementById('s-x').textContent = s.x.toFixed(3) + ' m';
+        document.getElementById('s-y').textContent = s.y.toFixed(3) + ' m';
+        document.getElementById('s-h').textContent = s.heading.toFixed(3) + ' rad';
+
+        // Update status panel
+        document.getElementById('ns-x').textContent = s.x.toFixed(3);
+        document.getElementById('ns-y').textContent = s.y.toFixed(3);
+        document.getElementById('ns-h').textContent = s.heading.toFixed(3);
+
+        // Redraw mini-map
+        drawMap();
+
+      } else if (data.type === 'error') {
+        if (thinkingEl) { thinkingEl.remove(); thinkingEl = null; }
+        addMsg('Error: ' + data.msg, 'error');
+        reenableInput();
+      }
+    };
+  }
+
+  function addMsg(text, type) {
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function reenableInput() {
+    sendBtn.disabled = false;
+    input.disabled   = false;
+    input.focus();
+  }
+
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    addMsg(text, 'user');
+    document.getElementById('ns-cmd').textContent = text.substring(0, 20) + '...';
+    ws.send(JSON.stringify({ message: text }));
+
+    input.value      = '';
+    sendBtn.disabled = true;
+    input.disabled   = true;
+  }
+
+  function sendQuick(cmd) {
+    input.value = cmd;
+    sendMessage();
+  }
+
+  function resetConversation() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ message: '__reset__' }));
+    messagesEl.innerHTML = '';
+    addMsg('Conversation reset. Ready for new commands.', 'status');
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // ── Voice input ──
+  const SpeechRecognition = window.SpeechRecognition
+                         || window.webkitSpeechRecognition;
+  let recognition  = null;
+  let isListening  = false;
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous     = false;
+    recognition.interimResults = true;
+    recognition.lang           = 'en-US';
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript).join('');
+      input.value = transcript;  // show partial text while speaking
+
+      if (event.results[0].isFinal) {
+        sendMessage();
+        stopListening();
+      }
+    };
+
+    recognition.onend   = () => stopListening();
+    recognition.onerror = (e) => {
+      console.error('Speech error:', e.error);
+      stopListening();
+      addMsg('Microphone error: ' + e.error, 'error');
+    };
+  } else {
+    micBtn.title   = 'Voice not supported in this browser. Use Chrome.';
+    micBtn.disabled = true;
+  }
+
+  function toggleVoice() {
+    if (!recognition) {
+      alert('Voice input requires Chrome or Edge.');
+      return;
+    }
+    isListening ? stopListening() : startListening();
+  }
+
+  function startListening() {
+    isListening = true;
+    micBtn.classList.add('listening');
+    micBtn.textContent = 'Stop';
+    input.placeholder  = 'Listening...';
+    recognition.start();
+  }
+
+  function stopListening() {
+    isListening = false;
+    micBtn.classList.remove('listening');
+    micBtn.textContent = 'Mic';
+    input.placeholder  = 'Type or use mic...';
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  connect();
+</script>
+</body>
+</html>
